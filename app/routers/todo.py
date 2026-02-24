@@ -78,3 +78,68 @@ def update_todo(id:int, db:SessionDep, user:AuthDep):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="An error occurred while deleting an item",
         )
+
+##EXERCISES:
+##Allows users to create a new category-POST 
+@todo_router.post('/category', status_code=status.HTTP_201_CREATED)
+def create_category(category:Category, db:SessionDep, user:AuthDep):
+    new_category=Category(text=category.text, user_id=user.id)
+    db.add(new_category)
+    db.commit()
+    db.refresh(new_category)
+    return new_category
+
+##Add category to todo.categories, given a todo and category-POST
+@todo_router.post("/todo/{todo_id}/category/{category_id}", status_code=status.HTTP_200_OK)
+def add_category_to_todo(todo_id: int, category_id: int, db:SessionDep, user: AuthDep):
+    todo=db.exec(select(Todo).where(Todo.id==todo_id)).one_or_none()
+    if not todo:
+        print("Todo not found")
+    category=db.exec(select(Category).where(Category.id==category_id)).one_or_none()
+    if not category:
+        print("Category not found")
+
+
+    #check if category is already in todo
+    if category in todo.categories:
+        return {
+            "message": "Category already assigned to this todo."
+        }
+    todo.categories.append(category)
+    db.add(todo)
+    db.commit()
+    db.refresh(todo)
+    return{"message": "Category was successfully added to Todo"}
+
+##Delete a todo from a todo.categories-DELETE
+@todo_router.delete("/todo/{todo_id}/category/{category_id}", status_code=status.HTTP_200_OK)
+def remove_category_to_todo(todo_id: int, category_id: int, db:SessionDep, user: AuthDep):
+    todo=db.exec(select(Todo).where(Todo.id==todo_id)).one_or_none()
+    if not todo:
+        print("Todo not found")
+    category=db.exec(select(Category).where(Category.id==category_id)).one_or_none()
+    if not category:
+        print("Category not found")
+
+
+    #check if category is already in todo
+    if category not in todo.categories:
+        return {
+            "message": "Category not in this todo."
+        }
+    todo.categories.remove(category)
+    db.add(todo)
+    db.commit()
+    db.refresh(todo)
+    return{"message": "Category was successfully removed to Todo"}
+
+
+##get todos for category-GET
+@todo_router.get("/category/{category_id}/todos", status_code=status.HTTP_200_OK)
+def get_todos_from_category(category_id: int, db:SessionDep, user: AuthDep):
+    category=db.exec(select(Category).where(Category.id==category_id)).one_or_none()
+    if not category:
+        print("Category does not exist")
+    todos=category.todos
+    return todos
+  
