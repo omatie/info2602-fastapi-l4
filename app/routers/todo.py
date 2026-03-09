@@ -10,9 +10,15 @@ from fastapi import status
 todo_router = APIRouter(tags=["Todo Management"])
 
 
-@todo_router.get('/todos', response_model=list[TodoResponse])
+# @todo_router.get('/todos', response_model=list[TodoResponse])
+# def get_todos(db:SessionDep, user:AuthDep):
+#     return user.todos
+
+
+@todo_router.get('/todo', response_model=list[TodoResponse])
 def get_todos(db:SessionDep, user:AuthDep):
-    return user.todos
+    todos=db.exec(select(Todo).where(Todo.user_id==user.id)).all()
+    return todos
 
 @todo_router.get('/todo/{id}', response_model=TodoResponse)
 def get_todo_by_id(id:int, db:SessionDep, user:AuthDep):
@@ -25,9 +31,9 @@ def get_todo_by_id(id:int, db:SessionDep, user:AuthDep):
         )
     return todo
 
-@todo_router.post('/todos', response_model=TodoResponse)
+@todo_router.post('/todo', response_model=TodoResponse)
 def create_todo(db:SessionDep, user:AuthDep, todo_data:TodoCreate):
-    todo = Todo(text=todo_data.text, user_id=user.id)
+    todo = Todo(text=todo_data.text, done=False, user_id=user.id)
     try:
         db.add(todo)
         db.commit()
@@ -38,6 +44,9 @@ def create_todo(db:SessionDep, user:AuthDep, todo_data:TodoCreate):
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="An error occurred while creating an item",
         )
+    
+
+
 
 @todo_router.put('/todo/{id}', response_model=TodoResponse)
 def update_todo(id:int, db:SessionDep, user:AuthDep, todo_data:TodoUpdate):
@@ -47,9 +56,9 @@ def update_todo(id:int, db:SessionDep, user:AuthDep, todo_data:TodoUpdate):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized",
         )
-    if todo_data.text:
+    if todo_data.text is not None:
         todo.text = todo_data.text
-    if todo_data.done:
+    if todo_data.done is not None:
         todo.done = todo_data.done
     try:
         db.add(todo)
@@ -61,8 +70,31 @@ def update_todo(id:int, db:SessionDep, user:AuthDep, todo_data:TodoUpdate):
             detail="An error occurred while updating an item",
         )
 
+
+
+# @todo_router.put('/todos/{id}/done', response_model=TodoResponse)
+# def toggledone_todo(id:int, db:SessionDep, user:AuthDep,):
+#     todo = db.exec(select(Todo).where(Todo.id==id, Todo.user_id==user.id)).one_or_none()
+#     if not todo:
+#         raise HTTPException(
+#             status_code=status.HTTP_401_UNAUTHORIZED,
+#             detail="Unauthorized",
+#         )
+    
+#     try:
+#         todo.toggle()
+#         db.add(todo)
+#         db.commit()
+#         return todo
+#     except Exception:
+#         raise HTTPException(
+#             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+#             detail="An error occurred while updating an item",
+#         )
+
+
 @todo_router.delete('/todo/{id}', status_code=status.HTTP_200_OK)
-def update_todo(id:int, db:SessionDep, user:AuthDep):
+def delete_todo(id:int, db:SessionDep, user:AuthDep):
 
     todo = db.exec(select(Todo).where(Todo.id==id, Todo.user_id==user.id)).one_or_none()
     if not todo:
@@ -142,4 +174,6 @@ def get_todos_from_category(category_id: int, db:SessionDep, user: AuthDep):
         print("Category does not exist")
     todos=category.todos
     return todos
-  
+
+
+

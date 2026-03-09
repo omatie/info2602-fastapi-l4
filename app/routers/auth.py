@@ -27,6 +27,23 @@ async def login_for_access_token(
 
     return {"access_token":access_token, "token_type":"bearer"}
 
+@auth_router.post("/login")
+async def login_json(
+    json_data: UserLogin,
+    db: Annotated[Session, Depends(get_session)]
+):
+    user = db.exec(select(RegularUser).where(RegularUser.username == json_data.username)).one_or_none()
+    if not user or not verify_password(plaintext_password=json_data.password, encrypted_password=user.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
+    access_token = create_access_token(data={"sub": str(user.id), "role": user.role},)
+
+    return {"access_token":access_token, "token_type":"bearer"}
+
 
 
 @auth_router.get("/identify")#, response_model=UserResponse)

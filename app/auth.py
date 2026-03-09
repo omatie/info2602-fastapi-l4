@@ -43,12 +43,12 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db:Ses
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username = payload.get("sub")
-        if username is None:
+        userid = payload.get("sub")
+        if userid is None:
             raise credentials_exception
     except InvalidTokenError:
         raise credentials_exception
-    user = db.exec(select(User).where(User.username == username)).one_or_none()
+    user = db.exec(select(RegularUser).where(RegularUser.id == userid)).one_or_none()
     if user is None:
         raise credentials_exception
     return user
